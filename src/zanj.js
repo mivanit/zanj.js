@@ -11,14 +11,14 @@ function joinUrl(base, rel) {
 }
 
 class ZanjLoader {
-	constructor(opts) {
-		this.baseUrl = (opts && opts.baseUrl) ? opts.baseUrl.replace(/\/+$/, "") : "";
+	constructor(path, opts) {
+		this.path = path;
 		this.fetchInit = (opts && opts.fetchInit) || undefined;
 		this._cache = new Map();
 	}
 
-	async loadRoot() {
-		const url = joinUrl(this.baseUrl, "__zanj__.json");
+	async read() {
+		const url = joinUrl(this.path, "__zanj__.json");
 		const res = await fetch(url, this.fetchInit);
 		if (!res.ok) throw new Error("Failed to fetch " + url + ": " + res.status);
 		const root = await res.json();

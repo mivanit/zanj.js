@@ -27,7 +27,7 @@
     document.getElementById("load").onclick = async () => {
       log("loading from " + BASE_PATH);
       try {
-        data = await (new ZanjLoader({ baseUrl: BASE_PATH })).loadRoot();
+        data = await (new ZanjLoader(BASE_PATH)).read();
         log("keys: " + Object.keys(data).join(", "));
         document.getElementById("big_array").disabled = false;
         document.getElementById("big_list").disabled = false;
