@@ -3,84 +3,44 @@
   <head>
     <meta charset="utf-8" />
     <title>ZANJ demo</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <style>
-      body { font-family: sans-serif; margin: 2rem; }
-      button { padding: 0.5rem 1rem; }
-      #log { margin-top: 1rem; white-space: pre-wrap; font-family: monospace; }
-      .row { margin: 0.5rem 0; }
-    </style>
   </head>
   <body>
-    <h1>ZANJ demo</h1>
-    <div class="row">
-      <label>Base URL (unzipped zanj folder):
-        <input id="base" size="50" value="/data/zanj_demo" />
-      </label>
-      <button id="load">Load root</button>
-    </div>
+    <h3>demo minimal</h3>
+    <input id="base" value="demo" />
+    <button id="load">load</button>
+    <button id="mean" disabled>mean(big_array)</button>
+    <pre id="out"></pre>
 
-    <div class="row">
-      <button id="mean" disabled>Compute mean(big_array) lazily</button>
-    </div>
-
-    <div id="log"></div>
-
-    <!-- include user-provided array.js first -->
-    <script src="./array.js"></script>
-    <!-- then our loader -->
-    <script src="./zanj.js"></script>
+    <script src="src/array.js"></script>
+    <script src="src/zanj.js"></script>
     <script>
-      (function () {
-        const logEl = document.getElementById("log");
-        function log(s) {
-          logEl.textContent += s + "\n";
+      const out = document.getElementById("out");
+      const log = (t) => out.textContent += t + "\n";
+
+      let root = null;
+
+      document.getElementById("load").onclick = async () => {
+        const base = document.getElementById("base").value.trim();
+        log("loading from " + base);
+        try {
+          const zl = new ZanjLoader({ baseUrl: base });
+          root = await zl.loadRoot();
+          log("keys: " + Object.keys(root).join(", "));
+          document.getElementById("mean").disabled = false;
+        } catch (e) {
+          log("error: " + e);
         }
+      };
 
-        const baseInput = document.getElementById("base");
-        const btnLoad = document.getElementById("load");
-        const btnMean = document.getElementById("mean");
-
-        let root = null;
-
-        btnLoad.addEventListener("click", async () => {
-          const baseUrl = baseInput.value.trim();
-          log("Loading __zanj__.json from " + baseUrl + " ...");
-          try {
-            const loader = new ZanjLoader({ baseUrl });
-            root = await loader.loadRoot();
-            log("Loaded root. Keys: " + Object.keys(root).join(", "));
-
-            // show a json field eagerly (if any)
-            if (root.info && typeof root.info.load === "function") {
-              const info = await root.info.load();
-              log("info.json: " + JSON.stringify(info));
-            }
-            btnMean.disabled = false;
-          } catch (e) {
-            console.error(e);
-            log("ERROR: " + e.message);
-          }
-        });
-
-        btnMean.addEventListener("click", async () => {
-          if (!root || !root.big_array || typeof root.big_array.load !== "function") {
-            log("Root or big_array not available.");
-            return;
-          }
-          log("Fetching big_array.npy lazily ...");
-          const t0 = performance.now();
-          const arr = await root.big_array.load(); // NDArray
-          const t1 = performance.now();
-          log("Fetched NDArray with shape " + arr.shape.join("x") + " dtype=" + arr.dtype + " in " + (t1 - t0).toFixed(1) + " ms");
-
-          const data = arr.data; // TypedArray
-          let sum = 0.0;
-          for (let i = 0; i < data.length; i++) sum += data[i];
-          const mean = sum / data.length;
-          log("mean(big_array) = " + mean);
-        });
-      })();
+      document.getElementById("mean").onclick = async () => {
+        if (!root || !root.big_array) return log("no big_array");
+        log("fetching big_array.npy ...");
+        const arr = await root.big_array.load();
+        const data = arr.data;
+        let s = 0;
+        for (let i = 0; i < data.length; i++) s += data[i];
+        log("mean = " + s / data.length);
+      };
     </script>
   </body>
 </html>
