@@ -6,40 +6,50 @@
   </head>
   <body>
     <h3>demo minimal</h3>
-    <input id="base" value="demo" />
+    <!-- <input id="base" value="demo" /> -->
+    path: <span id="base"></span>
     <button id="load">load</button>
-    <button id="mean" disabled>mean(big_array)</button>
+    <button id="big_array" disabled>load big_array</button>
+    <button id="big_list" disabled>load big_list</button>
     <pre id="out"></pre>
 
     <script src="src/array.js"></script>
     <script src="src/zanj.js"></script>
     <script>
+      BASE_PATH = "demo";
+      document.getElementById("base").textContent = BASE_PATH;
+      
       const out = document.getElementById("out");
       const log = (t) => out.textContent += t + "\n";
 
-      let root = null;
+      let data = null;
 
       document.getElementById("load").onclick = async () => {
-        const base = document.getElementById("base").value.trim();
-        log("loading from " + base);
+        log("loading from " + BASE_PATH);
         try {
-          const zl = new ZanjLoader({ baseUrl: base });
-          root = await zl.loadRoot();
-          log("keys: " + Object.keys(root).join(", "));
-          document.getElementById("mean").disabled = false;
+          data = await (new ZanjLoader({ baseUrl: BASE_PATH })).loadRoot();
+          log("keys: " + Object.keys(data).join(", "));
+          document.getElementById("big_array").disabled = false;
+          document.getElementById("big_list").disabled = false;
+
         } catch (e) {
           log("error: " + e);
         }
       };
 
-      document.getElementById("mean").onclick = async () => {
-        if (!root || !root.big_array) return log("no big_array");
+      document.getElementById("big_array").onclick = async () => {
         log("fetching big_array.npy ...");
-        const arr = await root.big_array.load();
-        const data = arr.data;
-        let s = 0;
-        for (let i = 0; i < data.length; i++) s += data[i];
-        log("mean = " + s / data.length);
+        const arr = await data.big_array.load();
+        log("big_array.shape = " + arr.shape);
+        log("big_array.dtype = " + arr.dtype);
+        log("big_array[0] = " + arr.data[0]);
+      };
+
+      document.getElementById("big_list").onclick = async () => {
+        log("fetching big_list ...");
+        const lst = await data.big_list.load();
+        log("len(big_list) = " + lst.length)
+        log("big_list[0] = " + lst[0]);
       };
     </script>
   </body>

@@ -6,10 +6,10 @@ def make_demo(out_dir: Path) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. make some data
-    arr = np.random.default_rng(0).normal(size=(20000, 32, 32)).astype(np.float32)
+    arr = np.random.default_rng(0).normal(size=(2000, 32, 32)).astype(np.float32)
     data = {
         "meta": {"title": "zanj demo"},
-        "big_list": [f"item {i}" for i in range(100000)],
+        "big_list": [f"item {i}" for i in range(1000)],
         "big_array": arr,
     }
 
