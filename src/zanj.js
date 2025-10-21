@@ -1,6 +1,6 @@
 // zanj.js
-// Minimal ZANJ loader (frontend-only). Supports refs to npy, json, and jsonl.
-// Requires array.js to be loaded first (NDArray, npyjs).
+// Minimal ZANJ loader with transparent lazy loading.
+// Supports refs to npy, json, and jsonl. Requires array.js (NDArray).
 
 const REF_KEY = "$ref";
 
@@ -8,17 +8,6 @@ function joinUrl(base, rel) {
   const b = base.replace(/\/+$/, "");
   const r = String(rel || "").replace(/^\/+/, "");
   return b + "/" + r;
-}
-
-class LazyValue {
-  constructor(loader) {
-    this._loader = loader; // () => Promise<any>
-    this._promise = null;
-  }
-  load() {
-    if (!this._promise) this._promise = this._loader();
-    return this._promise;
-  }
 }
 
 class ZanjLoader {
@@ -38,69 +27,101 @@ class ZanjLoader {
 
   _makeLazy(node) {
     if (node == null) return node;
-
     if (Array.isArray(node)) return node.map(v => this._makeLazy(v));
 
     if (typeof node === "object") {
-      // reference?
       if (Object.prototype.hasOwnProperty.call(node, REF_KEY)) {
-        const ref = node;
-        const path = String(ref[REF_KEY]);
-        const fmt = String(ref.format || this._inferFormat(path));
+        const path = String(node[REF_KEY]);
+        const fmt = String(node.format || this._inferFormat(path));
         if (!["npy", "json", "jsonl"].includes(fmt))
           throw new Error("Unsupported ref format: " + fmt);
-        const key = fmt + ":" + path;
-        return new LazyValue(() => this._loadCached(fmt, path, key));
+        return this._makeLazyRef(fmt, path);
       }
 
-      // plain object
+      // Recursively wrap objects
       const out = {};
       for (const k in node)
         if (Object.prototype.hasOwnProperty.call(node, k))
           out[k] = this._makeLazy(node[k]);
-      return out;
+      return this._proxify(out);
     }
 
     return node;
   }
 
   _inferFormat(path) {
-    const p = String(path).toLowerCase();
+    const p = path.toLowerCase();
     if (p.endsWith(".npy")) return "npy";
     if (p.endsWith(".json")) return "json";
     if (p.endsWith(".jsonl")) return "jsonl";
     throw new Error("Cannot infer format from path: " + path);
   }
 
-  _loadCached(fmt, path, key) {
-    const hit = this._cache.get(key);
-    if (hit) return hit;
+  _makeLazyRef(fmt, path) {
+    let value = null;
+    let loaded = false;
+    const key = fmt + ":" + path;
 
-    let p;
-    if (fmt === "npy") {
-      p = NDArray.load(joinUrl(this.baseUrl, path), undefined, this.fetchInit);
-    } else if (fmt === "json") {
-      p = fetch(joinUrl(this.baseUrl, path), this.fetchInit)
-        .then(r => {
+    const load = async () => {
+      if (this._cache.has(key)) return this._cache.get(key);
+      let p;
+      if (fmt === "npy") {
+        p = NDArray.load(joinUrl(this.baseUrl, path), undefined, this.fetchInit);
+      } else if (fmt === "json") {
+        p = fetch(joinUrl(this.baseUrl, path), this.fetchInit).then(r => {
           if (!r.ok) throw new Error("Failed to fetch " + path + ": " + r.status);
           return r.json();
         });
-    } else if (fmt === "jsonl") {
-      // Stream or fully read; simplest is to fetch text and split by newline
-      p = fetch(joinUrl(this.baseUrl, path), this.fetchInit)
-        .then(r => {
-          if (!r.ok) throw new Error("Failed to fetch " + path + ": " + r.status);
-          return r.text();
-        })
-        .then(t => {
-          // Each line should be valid JSON; ignore empty lines
-          return t.split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line));
-        });
-    } else {
-      p = Promise.reject(new Error("Unsupported format: " + fmt));
-    }
+      } else if (fmt === "jsonl") {
+        p = fetch(joinUrl(this.baseUrl, path), this.fetchInit)
+          .then(r => {
+            if (!r.ok) throw new Error("Failed to fetch " + path + ": " + r.status);
+            return r.text();
+          })
+          .then(t => t.split(/\r?\n/).filter(Boolean).map(line => JSON.parse(line)));
+      } else {
+        throw new Error("Unsupported format: " + fmt);
+      }
+      this._cache.set(key, p);
+      return p;
+    };
 
-    this._cache.set(key, p);
-    return p;
+    // Return a proxy object that resolves itself on first access
+    return new Proxy(
+      {},
+      {
+        get(_, prop) {
+          // if already loaded, just return
+          if (loaded) return value[prop];
+          // start loading if not started
+          if (!value) {
+            // kick off loading once, async
+            load().then(v => {
+              value = v;
+              loaded = true;
+            });
+          }
+          // For async use (await data.big_array)
+          if (prop === "then") {
+            // Allow 'await data.big_array' syntax
+            return (resolve, reject) => {
+              load().then(resolve, reject);
+            };
+          }
+          // Before loaded: placeholder or Promise
+          throw new Error(`Accessing property '${prop}' before ${path} loaded; use 'await data.${path.split(".").pop()}' or wait a bit.`);
+        },
+      }
+    );
+  }
+
+  _proxify(obj) {
+    // Return a Proxy that auto-awaits lazy refs when you do `await data.x`
+    return new Proxy(obj, {
+      get: (target, prop, receiver) => {
+        const val = Reflect.get(target, prop, receiver);
+        return val;
+      },
+    });
   }
 }

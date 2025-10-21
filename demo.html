@@ -39,7 +39,7 @@
 
       document.getElementById("big_array").onclick = async () => {
         log("fetching big_array.npy ...");
-        const arr = await data.big_array.load();
+        const arr = await data.big_array;
         log("big_array.shape = " + arr.shape);
         log("big_array.dtype = " + arr.dtype);
         log("big_array[0] = " + arr.data[0]);
@@ -47,7 +47,8 @@
 
       document.getElementById("big_list").onclick = async () => {
         log("fetching big_list ...");
-        const lst = await data.big_list.load();
+        log(data.big_list[0])
+        const lst = await data.big_list;
         log("len(big_list) = " + lst.length)
         log("big_list[0] = " + lst[0]);
       };
