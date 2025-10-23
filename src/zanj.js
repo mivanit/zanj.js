@@ -3,8 +3,8 @@
 // Supports refs to npy, json, and jsonl. Requires array.js (NDArray).
 
 // Must match muutils.json_serialize.util.{_REF_KEY, _FORMAT_KEY}
+// _FORMAT_KEY is defined in array.js
 const _REF_KEY = "$ref";
-const _FORMAT_KEY = "__muutils_format__";
 
 function joinUrl(base, rel) {
 	const b = base.replace(/\/+$/, "");
