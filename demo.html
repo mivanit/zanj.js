@@ -12,6 +12,7 @@
   <button id="load">load</button>
   <button id="big_array" disabled>load big_array</button>
   <button id="big_list" disabled>load big_list</button>
+  <button id="test_inline" disabled>test inline arrays</button>
   <pre id="out"></pre>
   <script src="src/array.js"></script>
   <script src="src/zanj.js"></script>
@@ -31,6 +32,7 @@
         log("keys: " + Object.keys(data).join(", "));
         document.getElementById("big_array").disabled = false;
         document.getElementById("big_list").disabled = false;
+        document.getElementById("test_inline").disabled = false;
 
       } catch (e) {
         log("error: " + e);
@@ -51,6 +53,51 @@
       const lst = await data.big_list;
       log("len(big_list) = " + lst.length)
       log("big_list[0] = " + lst[0]);
+    };
+
+    document.getElementById("test_inline").onclick = async () => {
+      log("\n=== Testing inline arrays ===");
+
+      if (!data.inline_arrays) {
+        log("No inline_arrays found - regenerate demo with: python make_demo.py");
+        return;
+      }
+
+      const inline = data.inline_arrays;
+
+      // Test small_list_meta
+      log("\n1. small_list_meta:");
+      log("  shape: " + inline.small_list_meta.shape);
+      log("  dtype: " + inline.small_list_meta.dtype);
+      log("  data: " + Array.from(inline.small_list_meta.data).join(", "));
+
+      // Test small_b64_meta
+      log("\n2. small_b64_meta:");
+      log("  shape: " + inline.small_b64_meta.shape);
+      log("  dtype: " + inline.small_b64_meta.dtype);
+      log("  data: " + Array.from(inline.small_b64_meta.data).join(", "));
+
+      // Test small_hex_meta
+      log("\n3. small_hex_meta:");
+      log("  shape: " + inline.small_hex_meta.shape);
+      log("  dtype: " + inline.small_hex_meta.dtype);
+      log("  data: " + Array.from(inline.small_hex_meta.data).join(", "));
+
+      // Test matrix_2x3
+      log("\n4. matrix_2x3:");
+      log("  shape: " + inline.matrix_2x3.shape);
+      log("  dtype: " + inline.matrix_2x3.dtype);
+      log("  data: " + Array.from(inline.matrix_2x3.data).join(", "));
+      log("  element[0,0]: " + inline.matrix_2x3.get(0, 0));
+      log("  element[1,2]: " + inline.matrix_2x3.get(1, 2));
+
+      // Test zero_dim
+      log("\n5. zero_dim:");
+      log("  shape: " + inline.zero_dim.shape);
+      log("  dtype: " + inline.zero_dim.dtype);
+      log("  value: " + inline.zero_dim.data[0]);
+
+      log("\n✓ All inline arrays loaded successfully!");
     };
   </script>
 </body>
