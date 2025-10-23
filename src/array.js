@@ -499,14 +499,23 @@ class NDArray {
 
 		// Handle zero-dimensional arrays
 		if (format === 'zero_dim') {
-			const data = new dtypeInfo.arrayConstructor([obj.data]);
+			let dataValue = obj.data;
+			// Convert to BigInt for 64-bit integer types
+			if (dtypeName === 'int64' || dtypeName === 'uint64') {
+				dataValue = BigInt(dataValue);
+			}
+			const data = new dtypeInfo.arrayConstructor([dataValue]);
 			return new NDArray(data, shape, dtypeName);
 		}
 
 		// Handle array_list_meta
 		if (format === 'array_list_meta') {
 			const flatList = obj.data.flat(Infinity);
-			const data = new dtypeInfo.arrayConstructor(flatList);
+			// Convert to BigInt for 64-bit integer types
+			const processedList = (dtypeName === 'int64' || dtypeName === 'uint64')
+				? flatList.map(v => BigInt(v))
+				: flatList;
+			const data = new dtypeInfo.arrayConstructor(processedList);
 			if (dtypeInfo.converter) {
 				const converted = dtypeInfo.converter(data);
 				return new NDArray(converted, shape, dtypeName);
