@@ -6,7 +6,9 @@
 // https://github.com/aplbrain/npyjs
 // under Apache License
 // https://github.com/aplbrain/npyjs/blob/b0cd99b7f4c2bff791b4977e16dec3478519920b/LICENSE
-// Added float16 support and NPZ loading
+// added:
+// - npz loading (requires jszip)
+// - JSON deserialization for various inline array formats (see https://github.com/mivanit/muutils , https://github.com/mivanit/zanj )
 // ------------------------------------------------------------
 
 // Must match muutils.json_serialize.util._FORMAT_KEY
@@ -204,6 +206,8 @@ class NDArray {
 			throw new Error(`Data length ${data.length} doesn't match shape ${shape} (expected ${this._size})`);
 		}
 	}
+
+	// TODO: sum, mean, reshape, transpose, etc
 
 	/**
 	 * Converts multidimensional indices to flat index
